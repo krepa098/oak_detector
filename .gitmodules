@@ -1,0 +1,3 @@
+[submodule "thirdparty/depthai-core"]
+	path = thirdparty/depthai-core
+	url = https://github.com/luxonis/depthai-core.git
