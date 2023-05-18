@@ -1,36 +1,4 @@
-# cmake_minimum_required(VERSION 3.8)
-# project(oak-detector)
-
-# if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-#   add_compile_options(-Wall -Wextra -Wpedantic)
-# endif()
-
-# # find dependencies
-# find_package(ament_cmake_auto REQUIRED)
-# ament_auto_find_build_dependencies()
-
-# find_package(depthai CONFIG REQUIRED)
-
-# # message generation
-# ament_auto_generate_code()
-
-# # setup targets
-# ament_auto_add_executable(oak_node src/main.cpp)
-
-# # export information to downstream packages
-# ament_auto_package()
-
-# # tests
-# if(AMENT_ENABLE_TESTING)
-#   find_package(ament_cmake_gtest REQUIRED)
-#   ament_add_gtest(foo_gtest test/my_test.cpp)
-#   target_link_libraries(foo_gtest ${rclcpp_LIBRARIES} ${rmw_connext_cpp_LIBRARIES} ${std_interfaces})
-# endif()
-
-
 cmake_minimum_required(VERSION 3.11)
-
-
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/depthai-core EXCLUDE_FROM_ALL)
 
