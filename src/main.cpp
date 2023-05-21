@@ -157,21 +157,12 @@ int main(int argc, char **argv) {
   });
 
   nnet_data_qeue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
-    RCLCPP_INFO(node->get_logger(), "NN DATA");
-    // if (auto nn_data = dynamic_cast<dai::NNData *>(callback.get())) {
-    //   for (const auto &name : nn_data->getAllLayerNames()) {
-    //     RCLCPP_INFO(node->get_logger(), "NN DATA ok!!! %s", name.c_str());
-
-    //     dai::TensorInfo tensor;
-    //     if (nn_data->getLayer("detection_out", &tensor)) {
-    //       tensor.
-    //     }
-    //   }
-    // }
-    if (auto buf = dynamic_cast<dai::ImgDetections *>(callback.get())) {
+    if (auto buf = dynamic_cast<dai::SpatialImgDetections *>(callback.get())) {
 
       for (const auto &detection : buf->detections) {
-        RCLCPP_INFO(node->get_logger(), "Detection %i", detection.label);
+        RCLCPP_INFO(node->get_logger(), "Detection %i, pos [%.2f,%.2f,%.2f]", detection.label,
+                    detection.spatialCoordinates.x, detection.spatialCoordinates.y,
+                    detection.spatialCoordinates.z);
       }
     }
   });

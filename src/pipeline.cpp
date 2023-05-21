@@ -61,12 +61,14 @@ dai::Pipeline createPipeline(const std::string &nn_path) {
   mono_right->out.link(stereo->right);
 
   // detection network
-  auto dn = pipeline.create<dai::node::MobileNetDetectionNetwork>();
+  auto dn = pipeline.create<dai::node::MobileNetSpatialDetectionNetwork>();
   dn->setConfidenceThreshold(0.5f);
   dn->setBlobPath(nn_path);
   dn->input.setBlocking(false);
+  dn->inputDepth.setBlocking(false);
 
   color->preview.link(dn->input);
+  stereo->depth.link(dn->inputDepth);
 
   // object tracker
   auto object_tracker = pipeline.create<dai::node::ObjectTracker>();
@@ -93,17 +95,19 @@ dai::Pipeline createPipeline(const std::string &nn_path) {
   tracker_out->setStreamName("object_tracker");
 
   // create links
+
+  // sys logger
   sys_logger->out.link(sys_logger_out->input);
-  // dn->outNetwork.link(nn_out->input);
+
+  // neural network
   dn->out.link(nn_out->input);
-  //   dn->passthrough.link(color_out->input);
-  //   dn->passthrough.link(nn_out->input);
-  color->preview.link(preview_out->input);
+  dn->passthrough.link(preview_out->input);
 
   // link object tracker
-  // color->preview.link(object_tracker->inputTrackerFrame);
-  // dn->out.link(object_tracker->inputDetections);
-  // object_tracker->out.link(tracker_out->input);
+  dn->passthrough.link(object_tracker->inputDetectionFrame);
+  dn->passthrough.link(object_tracker->inputTrackerFrame); // this can be the full frame
+  dn->out.link(object_tracker->inputDetections);
+  object_tracker->out.link(tracker_out->input);
 
   // link color video encoder
   color->video.link(color_encoder->input);
