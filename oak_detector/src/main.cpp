@@ -68,25 +68,9 @@ int main(int argc, char **argv) {
       device.getOutputQueue("object_tracker", 4, false);
 
   // ros bridge
-  dai::rosBridge::ImageConverter img_converter("rgb_frame");
-  dai::rosBridge::ImageConverter depth_img_converter("depth_frame");
+  dai::rosBridge::ImageConverter img_converter("converter");
   auto rgb_cam_info =
       img_converter.calibrationToCameraInfo(device.readCalibration(), dai::CameraBoardSocket::RGB);
-
-  //   dai::rosBridge::BridgePublisher<sensor_msgs::msg::Image, dai::ImgFrame>
-  //       rgb_publish(preview_queue, node, std::string("color/image"),
-  //                   std::bind(&dai::rosBridge::ImageConverter::toRosMsg,
-  //                             &img_converter, std::placeholders::_1,
-  //                             std::placeholders::_2),
-  //                   30, rgb_cam_info, "color");
-
-  //   dai::rosBridge::BridgePublisher<sensor_msgs::msg::Image, dai::ImgFrame>
-  //       mjpeg_publish(encoder_queue, node,
-  //       std::string("color/image/compressed"),
-  //                     std::bind(&dai::rosBridge::ImageConverter::toRosMsg,
-  //                               &img_converter, std::placeholders::_1,
-  //                               std::placeholders::_2),
-  //                     30);
 
   sys_logger_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
     if (auto buf = dynamic_cast<dai::SystemInformation *>(callback.get())) {
@@ -120,7 +104,7 @@ int main(int argc, char **argv) {
   });
 
   preview_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
-    if (auto buf = std::dynamic_pointer_cast<dai::ImgFrame>(callback)) {
+    if (const auto buf = std::dynamic_pointer_cast<dai::ImgFrame>(callback)) {
       auto msg = img_converter.toRosMsgPtr(buf);
       if (msg) {
         preview_pub->publish(*msg.get());
@@ -141,8 +125,8 @@ int main(int argc, char **argv) {
   });
 
   depth_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
-    if (auto buf = std::dynamic_pointer_cast<dai::ImgFrame>(callback)) {
-      auto msg = depth_img_converter.toRosMsgPtr(buf);
+    if (const auto buf = std::dynamic_pointer_cast<dai::ImgFrame>(callback)) {
+      auto msg = img_converter.toRosMsgPtr(buf);
       if (msg) {
         depth_pub->publish(*msg.get());
       }
