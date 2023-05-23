@@ -147,8 +147,8 @@ int main(int argc, char **argv) {
         detection_msg.position.x = detection.spatialCoordinates.x;
         detection_msg.position.y = detection.spatialCoordinates.y;
         detection_msg.position.z = detection.spatialCoordinates.z;
-        detection_msg.bbox.center.position.x = (roi.x + roi.width) / 2.0f;
-        detection_msg.bbox.center.position.y = (roi.y + roi.height) / 2.0f;
+        detection_msg.bbox.center.position.x = roi.x + roi.width / 2.0f;
+        detection_msg.bbox.center.position.y = roi.y + roi.height / 2.0f;
         detection_msg.bbox.size_x = roi.width;
         detection_msg.bbox.size_y = roi.height;
 

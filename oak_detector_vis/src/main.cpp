@@ -53,9 +53,10 @@ int main(int argc, char **argv) {
           roi.y = bb.center.position.y - bb.size_y / 2.0f;
           roi.width = bb.size_x;
           roi.height = bb.size_y;
-          cv::rectangle(cv_img->image, roi, cv::Scalar(0, 255, 255), 2);
 
-          RCLCPP_INFO(node->get_logger(), "%.2f %.2f", roi.x, roi.y);
+          cv::rectangle(cv_img->image, roi, cv::Scalar(0, 0, 200), 1);
+
+          RCLCPP_INFO(node->get_logger(), "%i %i", roi.x, roi.y);
         }
 
         CompressedImage ros_img;
