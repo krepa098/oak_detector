@@ -25,19 +25,19 @@ int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("oak_detector_node");
   auto compressed_image_pub = node->create_publisher<sensor_msgs::msg::CompressedImage>(
-      "color/compressed", rclcpp::QoS(10).best_effort());
+      "color/compressed", rclcpp::SensorDataQoS());
 
-  auto preview_pub = node->create_publisher<sensor_msgs::msg::Image>("preview/image",
-                                                                     rclcpp::QoS(10).best_effort());
+  auto preview_pub =
+      node->create_publisher<sensor_msgs::msg::Image>("preview/image", rclcpp::SensorDataQoS());
 
   auto compressed_mono_pub = node->create_publisher<sensor_msgs::msg::CompressedImage>(
-      "mono/compressed", rclcpp::QoS(10).best_effort());
+      "mono/compressed", rclcpp::SensorDataQoS());
 
   auto depth_pub =
-      node->create_publisher<sensor_msgs::msg::Image>("depth/image", rclcpp::QoS(10).best_effort());
+      node->create_publisher<sensor_msgs::msg::Image>("depth/image", rclcpp::SensorDataQoS());
 
   auto object_tracker_pub = node->create_publisher<depthai_ros_msgs::msg::SpatialDetectionArray>(
-      "object_tracker/detections", rclcpp::QoS(10).best_effort());
+      "object_tracker/detections", rclcpp::SensorDataQoS());
 
   RCLCPP_INFO(node->get_logger(), "creating pipeline");
   dai::Pipeline pipeline = createPipeline(BLOB_PATH);
@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
 
   // ros bridge
   dai::rosBridge::ImageConverter img_converter("rgb_frame");
+  dai::rosBridge::ImageConverter depth_img_converter("depth_frame");
   auto rgb_cam_info =
       img_converter.calibrationToCameraInfo(device.readCalibration(), dai::CameraBoardSocket::RGB);
 
@@ -89,10 +90,16 @@ int main(int argc, char **argv) {
 
   sys_logger_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
     if (auto buf = dynamic_cast<dai::SystemInformation *>(callback.get())) {
-      RCLCPP_INFO(node->get_logger(),
-                  "SysInfo\nCPU  | Leon CSS %.1f%%, Leon MSS %.1f%%\nTEMP | Chip %.1f°C",
-                  buf->leonCssCpuUsage.average * 100.0f, buf->leonMssCpuUsage.average * 100.0f,
-                  buf->chipTemperature.average);
+      RCLCPP_INFO(
+          node->get_logger(),
+          "SysInfo\nCPU  | Leon CSS %.1f%%, Leon MSS %.1f%%\nTEMP | Chip %.1f°C\nMEM  | "
+          "DDR %li/%li MB, CMX %li/%li MB\nHEAP | Leon CSS %li/%li MB, Leon MSS %li/%li MB",
+          buf->leonCssCpuUsage.average * 100.0f, buf->leonMssCpuUsage.average * 100.0f,
+          buf->chipTemperature.average, buf->ddrMemoryUsage.used / 1024 / 1024,
+          buf->ddrMemoryUsage.total / 1024 / 1024, buf->cmxMemoryUsage.used / 1024 / 1024,
+          buf->cmxMemoryUsage.total / 1024 / 1024, buf->leonCssMemoryUsage.used / 1024 / 1024,
+          buf->leonCssMemoryUsage.total / 1024 / 1024, buf->leonMssMemoryUsage.used / 1024 / 1024,
+          buf->leonMssMemoryUsage.total / 1024 / 1024);
     }
   });
 
@@ -113,18 +120,11 @@ int main(int argc, char **argv) {
   });
 
   preview_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
-    if (auto buf = dynamic_cast<dai::ImgFrame *>(callback.get())) {
-      sensor_msgs::msg::Image image;
-      image.data = std::move(buf->getData());
-      image.width = buf->getWidth();
-      image.height = buf->getHeight();
-      image.step = buf->getWidth() * 3;
-      image.encoding = "bgr8";
-      image.is_bigendian = false;
-      image.header.stamp = node->now();
-      image.header.frame_id = "cam";
-
-      preview_pub->publish(image);
+    if (auto buf = std::dynamic_pointer_cast<dai::ImgFrame>(callback)) {
+      auto msg = img_converter.toRosMsgPtr(buf);
+      if (msg) {
+        preview_pub->publish(*msg.get());
+      }
     }
   });
 
@@ -141,53 +141,66 @@ int main(int argc, char **argv) {
   });
 
   depth_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
-    if (auto buf = dynamic_cast<dai::ImgFrame *>(callback.get())) {
-      sensor_msgs::msg::Image image;
-      image.data = std::move(buf->getData());
-      image.width = buf->getWidth();
-      image.height = buf->getHeight();
-      image.step = image.width * 2;
-      image.encoding = "mono16";
-      image.is_bigendian = false;
-      image.header.stamp = node->now();
-      image.header.frame_id = "cam";
-
-      depth_pub->publish(image);
+    if (auto buf = std::dynamic_pointer_cast<dai::ImgFrame>(callback)) {
+      auto msg = depth_img_converter.toRosMsgPtr(buf);
+      if (msg) {
+        depth_pub->publish(*msg.get());
+      }
     }
   });
 
   nnet_data_qeue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
     if (auto buf = dynamic_cast<dai::SpatialImgDetections *>(callback.get())) {
+      depthai_ros_msgs::msg::SpatialDetectionArray detections;
 
       for (const auto &detection : buf->detections) {
         RCLCPP_INFO(node->get_logger(), "Detection %i, pos [%.2f,%.2f,%.2f]", detection.label,
                     detection.spatialCoordinates.x, detection.spatialCoordinates.y,
                     detection.spatialCoordinates.z);
-      }
-    }
-  });
 
-  tracker_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
-    if (auto buf = dynamic_cast<dai::Tracklets *>(callback.get())) {
-      depthai_ros_msgs::msg::SpatialDetectionArray detections;
-      detections.header.frame_id = "cam";
-      detections.header.stamp = node->now();
-      for (const auto &tracklet : buf->tracklets) {
-        depthai_ros_msgs::msg::SpatialDetection detection;
-        detection.position.x = tracklet.spatialCoordinates.x;
-        detection.position.y = tracklet.spatialCoordinates.y;
-        detection.position.z = tracklet.spatialCoordinates.z;
-        detection.is_tracking = tracklet.status == dai::Tracklet::TrackingStatus::TRACKED;
-        detection.bbox.center.position.x = (tracklet.roi.x + tracklet.roi.width) / 2.0f;
-        detection.bbox.center.position.y = (tracklet.roi.y + tracklet.roi.height) / 2.0f;
-        detection.bbox.size_x = tracklet.roi.width;
-        detection.bbox.size_y = tracklet.roi.height;
+        depthai_ros_msgs::msg::SpatialDetection detection_msg;
+        auto roi = detection.boundingBoxMapping.roi.denormalize(300, 300);
+        detection_msg.position.x = detection.spatialCoordinates.x;
+        detection_msg.position.y = detection.spatialCoordinates.y;
+        detection_msg.position.z = detection.spatialCoordinates.z;
+        detection_msg.bbox.center.position.x = (roi.x + roi.width) / 2.0f;
+        detection_msg.bbox.center.position.y = (roi.y + roi.height) / 2.0f;
+        detection_msg.bbox.size_x = roi.width;
+        detection_msg.bbox.size_y = roi.height;
 
-        detections.detections.push_back(detection);
+        detections.detections.push_back(detection_msg);
+
+        RCLCPP_INFO(node->get_logger(), "ROI pos [%.1f %.1f %.1f %.1f]", roi.x, roi.y, roi.width,
+                    roi.height);
       }
 
       object_tracker_pub->publish(detections);
     }
+  });
+
+  tracker_queue->addCallback([&](std::shared_ptr<dai::ADatatype> callback) {
+    // if (auto buf = dynamic_cast<dai::Tracklets *>(callback.get())) {
+    //   depthai_ros_msgs::msg::SpatialDetectionArray detections;
+    //   detections.header.frame_id = "cam";
+    //   detections.header.stamp = node->now();
+    //   for (const auto &tracklet : buf->tracklets) {
+    //     depthai_ros_msgs::msg::SpatialDetection detection;
+    //     detection.position.x = tracklet.spatialCoordinates.x;
+    //     detection.position.y = tracklet.spatialCoordinates.y;
+    //     detection.position.z = tracklet.spatialCoordinates.z;
+    //     detection.is_tracking = tracklet.status == dai::Tracklet::TrackingStatus::TRACKED;
+    //     detection.bbox.center.position.x = (tracklet.roi.x + tracklet.roi.width) / 2.0f;
+    //     detection.bbox.center.position.y = (tracklet.roi.y + tracklet.roi.height) / 2.0f;
+    //     detection.bbox.size_x = tracklet.roi.width;
+    //     detection.bbox.size_y = tracklet.roi.height;
+
+    //     detections.detections.push_back(detection);
+
+    //     RCLCPP_INFO(node->get_logger(), "ROI");
+    //   }
+
+    //   object_tracker_pub->publish(detections);
+    // }
   });
 
   RCLCPP_INFO(node->get_logger(), "spin...");
