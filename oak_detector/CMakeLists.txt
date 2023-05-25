@@ -21,14 +21,14 @@ find_package(depthai_bridge REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 # setup targets
-add_executable(${PROJECT_NAME}_node 
+add_executable(${PROJECT_NAME}_node
   src/main.cpp
   src/pipeline.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME}_node 
-  rclcpp 
-  depthai_bridge 
+ament_target_dependencies(${PROJECT_NAME}_node
+  rclcpp
+  depthai_bridge
   depthai_ros_msgs
   depthai
 )
@@ -50,7 +50,7 @@ file(DOWNLOAD
 target_compile_definitions(${PROJECT_NAME}_node PRIVATE BLOB_PATH="${CMAKE_BINARY_DIR}/oak-nn.blob" ON)
 
 # install
-install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 install(TARGETS ${PROJECT_NAME}_node
   ARCHIVE DESTINATION lib

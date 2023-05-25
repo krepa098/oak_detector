@@ -1,0 +1,36 @@
+version: '3'
+services:
+  ros:
+    image: ros_humble_gpu
+    build: .
+    container_name: ros_trigger_vision
+    network_mode: "host"
+    ipc: "host"
+    privileged: true
+    volumes:
+      - ${HOME}/.ssh:/home/sntarg/.ssh
+      - /tmp/.docker.xauth:/tmp/.docker.xauth
+      - /tmp/.X11-unix/:/tmp/.X11-unix/
+      - ..:/home/sntarg/ros_ws/src/trigger_vision
+      - trigger_vision_ros_ws:/home/sntarg/ros_ws
+      - bashhistory:/bashhistory
+      - /dev/:/dev/
+    device_cgroup_rules:
+      - 'c 189:* rmw'
+    environment:
+      - DISPLAY=:0
+      - XDG_RUNTIME_DIR
+      - XAUTHORITY=/tmp/.docker.xauth
+    user: sntarg
+    cap_add:
+      - ALL
+    tty: true
+    stdin_open: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+volumes:
+  trigger_vision_ros_ws:
+  bashhistory:
