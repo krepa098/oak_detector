@@ -210,6 +210,7 @@ RUN source $HOME/miniconda3/etc/profile.d/conda.sh && \
     git clone https://github.com/luxonis/depthai.git && \
     cd depthai/ && \
     python3 install_requirements.py
+RUN echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules
 
 
 RUN printf "if [[ -r $CONDA_ROOT/etc/profile.d/bash_completion.sh ]]; then\n\
@@ -218,12 +219,10 @@ else\n\
     echo 'WARNING: could not find conda-bash-completion setup script'\n\
 fi\n" >> ~/.bashrc
 
+RUN printf "conda activate ros" >> ~/.bashrc
+
 # RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu117
 
 # RUN pip3 install transformers timm open3d
-
-# RUN pip install djitellopy2 av image pygame pycocotools
-
-WORKDIR $ROS_WS
 
 # RUN sudo sed -i ''$(($(wc -l < /usr/local/bin/nvidia_entrypoint.sh)-4))'i rosdep update && sudo apt update && rosdep install --from-paths . -y --ignore-src \n sleep 3 \n' /usr/local/bin/nvidia_entrypoint.sh
