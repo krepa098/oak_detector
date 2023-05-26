@@ -1,6 +1,6 @@
 {
     "name": "ROS Humble development",
-    "dockerComposeFile": "../docker/compose.yml",
+    "dockerComposeFile": "../trigger_vision_docker/compose.yml",
     "service": "ros",
     "workspaceFolder": "/home/sntarg/ros_ws/src/trigger_vision",
     "shutdownAction": "stopCompose",

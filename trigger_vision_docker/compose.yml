@@ -7,10 +7,16 @@ services:
     network_mode: "host"
     ipc: "host"
     privileged: true
+    devices:
+      - '/dev/dri/card0:/dev/dri/card0'
+      - '/dev/dri/renderD128:/dev/dri/renderD128'
+      - '/dev/dxg:/dev/dxg'
     volumes:
-      - ${HOME}/.ssh:/home/sntarg/.ssh
+      - /tmp/.X11-unix:/tmp/.X11-unix
       - /tmp/.docker.xauth:/tmp/.docker.xauth
-      - /tmp/.X11-unix/:/tmp/.X11-unix/
+      - /mnt/wslg:/mnt/wslg
+      - /usr/lib/wsl:/usr/lib/wsl
+      - ${HOME}/.ssh:/home/sntarg/.ssh
       - ..:/home/sntarg/ros_ws/src/trigger_vision
       - trigger_vision_ros_ws:/home/sntarg/ros_ws
       - bashhistory:/bashhistory
@@ -20,6 +26,8 @@ services:
     environment:
       - DISPLAY=:0
       - XDG_RUNTIME_DIR
+      - WAYLAND_DISPLAY
+      - PULSE_SERVER
       - XAUTHORITY=/tmp/.docker.xauth
     user: sntarg
     cap_add:

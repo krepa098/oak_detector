@@ -1,64 +1,73 @@
 FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04 as base
+# https://github.com/microsoft/wslg/blob/main/samples/container/Containers.md
 
 ARG ROS_WS_NAME=ros_ws
 ARG ROS2_DISTRO=humble
 
 ARG USERNAME=sntarg
-
 ARG PASSWD=pwd
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 ENV TZ=Europe/Rome
 
+ENV LIBVA_DRIVER_NAME=d3d12
+ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/lib/wsl/lib
+#https://github.com/NVIDIA/nvidia-docker/issues/1438
+ENV NVIDIA_VISIBLE_DEVICES \
+    ${NVIDIA_VISIBLE_DEVICES:-all}
+ENV NVIDIA_DRIVER_CAPABILITIES \
+    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,video
+
 RUN apt-get update && apt-get upgrade -y &&\
     apt-get install -y \
     tzdata sudo \
     build-essential \
     software-properties-common \
-    libssl-dev libffi-dev \
-    ssh \
+    xdg-user-dirs \
+    pkg-config \
     gcc \
     g++ \
     gdb \
     clang \
     cmake \
-    rsync \
-    tar \
-    git \
-    wget \
-    curl \
-    unzip \
-    yasm \
-    pkg-config \
-    libswscale-dev \
-    libtbb2 \
-    libtbb-dev \
+    pkg-config
+
+RUN add-apt-repository ppa:oibaf/graphics-drivers -y
+
+RUN apt update && apt install -y \
+    vainfo \
+    mesa-va-drivers \
+    mesa-utils
+
+
+
+RUN apt-get update && apt-get upgrade -y &&\
+    apt-get install -y \
+    libdw-dev \
     libjpeg-dev \
     libpng-dev \
-    libtiff-dev \
+    libtiff-dev libtiff5-dev \
     libavformat-dev \
     libpq-dev \
     libxine2-dev \
     libglew-dev \
-    libtiff5-dev \
     zlib1g-dev \
-    libjpeg-dev \
     libavcodec-dev \
     libavformat-dev \
     libavutil-dev \
     libpostproc-dev \
     libswscale-dev \
     libeigen3-dev \
-    libtbb-dev \
+    libtbb2 libtbb-dev \
+    libssl-dev \
+    libffi-dev \
     libgtk2.0-dev \
-    pkg-config \
-    python3-dev \
-    python3-pip \
-    python3-venv \
+    libqt5opengl5-dev \
     qtbase5-dev qt5-qmake \
-    libgl1-mesa-glx libgl1-mesa-dri mesa-utils xdg-user-dirs \
-    libfontconfig1-dev libfreetype6-dev libx11-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libx11-dev \
     libx11-xcb-dev \
     libxext-dev \
     libxfixes-dev \
@@ -77,17 +86,30 @@ RUN apt-get update && apt-get upgrade -y &&\
     libxcb-render-util0-dev \
     libxkbcommon-dev \
     libxkbcommon-x11-dev \
-    libxinerama-dev \
-    libqt5opengl5-dev \
+    libxinerama-dev
+
+RUN apt-get install -y \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    python3-tk \
     tmux \
     iputils-ping \
     iproute2 \
     net-tools \
     bash-completion  \
-    libdw-dev \
-    python3-tk \
     htop \
-    && rm -rf /var/lib/apt/lists/*
+    usbutils \
+    ssh \
+    rsync \
+    tar \
+    git \
+    wget \
+    curl \
+    unzip \
+    yasm \
+    vim \
+    nano
 
 #ROS2 Installation
 RUN locale
@@ -99,11 +121,7 @@ RUN locale
 
 RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
-RUN apt update && apt upgrade -y &&\
-    apt install -y ros-${ROS2_DISTRO}-desktop python3-argcomplete ros-dev-tools python3-colcon-common-extensions\
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt update && apt upgrade -y && apt install -y ros-${ROS2_DISTRO}-depthai-ros vim\
+RUN apt update && apt install -y ros-${ROS2_DISTRO}-desktop python3-argcomplete ros-dev-tools python3-colcon-common-extensions ros-${ROS2_DISTRO}-depthai-ros\
     && rm -rf /var/lib/apt/lists/*
 
 RUN rosdep init
@@ -128,12 +146,6 @@ RUN usermod --password $(openssl passwd -1 ${PASSWD}) ${USERNAME}
 
 RUN usermod --password $(openssl passwd -1 ${PASSWD}) root
 
-#https://github.com/NVIDIA/nvidia-docker/issues/1438
-ENV NVIDIA_VISIBLE_DEVICES \
-    ${NVIDIA_VISIBLE_DEVICES:-all}
-ENV NVIDIA_DRIVER_CAPABILITIES \
-    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
-
 #https://stackoverflow.com/questions/34630571/docker-env-variables-not-set-while-log-via-shell
 RUN env | grep _ >> /etc/environment
 RUN mkdir /root/.ssh
@@ -149,11 +161,17 @@ RUN echo "Dir::Cache::srcpkgcache "";" > etc/apt/apt.conf.d/docker-clean
 
 USER $USERNAME
 
+# https://github.com/microsoft/WSL/issues/7507
+# ENV LIBVA_DRIVER_NAME=d3d12
+# ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}/usr/lib/wsl/lib
+# https://github.com/microsoft/wslg/wiki/GPU-selection-in-WSLg
+# ENV MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA
+ENV LIBGL_ALWAYS_SOFTWARE=1
+
 RUN xdg-user-dirs-update --force
 
-RUN mkdir -p /tmp/runtime-ros
-
-RUN echo 'export XDG_RUNTIME_DIR=/tmp/runtime-ros' >> ~/.bashrc
+# RUN mkdir -p /tmp/runtime-ros
+# RUN echo 'export XDG_RUNTIME_DIR=/tmp/runtime-ros' >> ~/.bashrc
 
 RUN mkdir ${HOME}/.ssh
 
@@ -188,14 +206,6 @@ RUN conda init bash && conda update conda && conda install -c conda-forge conda-
 
 RUN conda config --set auto_activate_base false
 
-# RUN source $HOME/miniconda3/etc/profile.d/conda.sh && conda activate ros && conda install -c conda-forge rosdep rospkg empy lxml catkin_pkg lark
-
-# RUN source $HOME/miniconda3/etc/profile.d/conda.sh && conda activate ros &&\
-#     python -m pip install --upgrade pip \
-#     pip install -U colcon-common-extensions
-
-
-
 RUN source $HOME/miniconda3/etc/profile.d/conda.sh && \
     conda activate ros &&\
     pip install Cython numpy scipy \
@@ -220,6 +230,7 @@ else\n\
 fi\n" >> ~/.bashrc
 
 RUN printf "conda activate ros" >> ~/.bashrc
+
 
 # RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu117
 
