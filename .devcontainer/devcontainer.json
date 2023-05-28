@@ -1,0 +1,29 @@
+{
+    "name": "ROS Humble development",
+    "dockerComposeFile": "../trigger_vision_docker/compose.yml",
+    "service": "ros",
+    "workspaceFolder": "/home/sntarg/ros_ws/src/trigger_vision",
+    "shutdownAction": "stopCompose",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"magicstack.MagicPython",
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
+				"twxs.cmake",
+				"ms-vscode.cmake-tools",
+				"josetr.cmake-language-support-vscode",
+				"donjayamanne.githistory",
+				"GitHub.vscode-pull-request-github",
+				"esbenp.prettier-vscode",
+				"ms-iot.vscode-ros",
+				"DotJoshJohnson.xml",
+				"garytyler.darcula-pycharm",
+				"DavidAnson.vscode-markdownlint",
+				"ms-python.vscode-pylance",
+				"EthanSK.restore-terminals"
+			]
+		}
+	}
+  }

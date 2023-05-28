@@ -19,12 +19,12 @@ find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
 
 # setup targets
-add_executable(${PROJECT_NAME}_node 
+add_executable(${PROJECT_NAME}_node
   src/main.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME}_node 
-  rclcpp 
+ament_target_dependencies(${PROJECT_NAME}_node
+  rclcpp
   depthai_ros_msgs
   sensor_msgs
   OpenCV
@@ -40,7 +40,7 @@ target_include_directories(
 )
 
 # install
-install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 install(TARGETS ${PROJECT_NAME}_node
   ARCHIVE DESTINATION lib
