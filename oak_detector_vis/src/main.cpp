@@ -30,18 +30,18 @@ int main(int argc, char **argv) {
 
   // pubs
   auto detections_pub = node->create_publisher<CompressedImage>(
-      "/oak_detector/object_tracker_vis/detections/compressed", rclcpp::QoS(10));
+      "/oak_detector/object_tracker_vis/detections/compressed", rclcpp::SensorDataQoS());
 
   // subs
   auto detections_sub = node->create_subscription<SpatialDetectionArray>(
-      "/oak_detector/object_tracker/detections", rclcpp::QoS(10).best_effort(),
+      "/oak_detector/object_tracker/detections", rclcpp::SensorDataQoS(),
       [&](const SpatialDetectionArray &msg) {
         std::scoped_lock lock(last_detection_mutex);
         last_detections = msg;
       });
 
   auto preview_sub = node->create_subscription<Image>(
-      "/oak_detector/preview/image", rclcpp::QoS(10).best_effort(), [&](const Image &msg) {
+      "/oak_detector/preview/image", rclcpp::SensorDataQoS(), [&](const Image &msg) {
         std::scoped_lock lock(last_detection_mutex);
         auto cv_img = cv_bridge::toCvCopy(msg);
 
