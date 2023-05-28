@@ -142,8 +142,14 @@ int main(int argc, char **argv) {
                     detection.spatialCoordinates.x, detection.spatialCoordinates.y,
                     detection.spatialCoordinates.z);
 
+        dai::Rect roi;
+        roi.x = detection.xmin;
+        roi.y = detection.ymin;
+        roi.width = detection.xmax - detection.xmin;
+        roi.height = detection.ymax - detection.ymin;
+        roi = roi.denormalize(300, 300);
+
         depthai_ros_msgs::msg::SpatialDetection detection_msg;
-        auto roi = detection.boundingBoxMapping.roi.denormalize(300, 300);
         detection_msg.position.x = detection.spatialCoordinates.x;
         detection_msg.position.y = detection.spatialCoordinates.y;
         detection_msg.position.z = detection.spatialCoordinates.z;
