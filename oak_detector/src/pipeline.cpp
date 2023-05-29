@@ -23,6 +23,7 @@ dai::Pipeline createPipeline(const std::string &nn_path) {
   color->setColorOrder(dai::ColorCameraProperties::ColorOrder::BGR);
   color->setBoardSocket(dai::CameraBoardSocket::RGB);
   color->setFps(fps);
+  color->setPreviewKeepAspectRatio(false);
 
   // video encoder
   auto color_encoder = pipeline.create<dai::node::VideoEncoder>();
@@ -64,6 +65,7 @@ dai::Pipeline createPipeline(const std::string &nn_path) {
   auto dn = pipeline.create<dai::node::MobileNetSpatialDetectionNetwork>();
   dn->setConfidenceThreshold(0.5f);
   dn->setBlobPath(nn_path);
+  dn->setNumInferenceThreads(3);
   dn->input.setBlocking(false);
   dn->inputDepth.setBlocking(false);
 
@@ -95,7 +97,7 @@ dai::Pipeline createPipeline(const std::string &nn_path) {
   tracker_out->setStreamName("object_tracker");
 
   // create links
-
+  //
   // sys logger
   sys_logger->out.link(sys_logger_out->input);
 

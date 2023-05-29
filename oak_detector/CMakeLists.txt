@@ -24,6 +24,7 @@ find_package(sensor_msgs REQUIRED)
 add_executable(${PROJECT_NAME}_node
   src/main.cpp
   src/pipeline.cpp
+  src/camera_node.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_node
