@@ -117,16 +117,11 @@ CameraNode::CameraNode(const std::string &name) : rclcpp::Node(name) {
       depthai_ros_msgs::msg::SpatialDetectionArray detections;
 
       for (const auto &detection : buf->detections) {
-        RCLCPP_INFO(get_logger(), "Detection %i, pos [%.2f,%.2f,%.2f]", detection.label,
-                    detection.spatialCoordinates.x, detection.spatialCoordinates.y,
-                    detection.spatialCoordinates.z);
-
         dai::Rect roi;
         roi.x = detection.xmin;
         roi.y = detection.ymin;
         roi.width = detection.xmax - detection.xmin;
         roi.height = detection.ymax - detection.ymin;
-        roi = roi.denormalize(300, 300);
 
         depthai_ros_msgs::msg::SpatialDetection detection_msg;
         detection_msg.position.x = detection.spatialCoordinates.x;
@@ -138,9 +133,6 @@ CameraNode::CameraNode(const std::string &name) : rclcpp::Node(name) {
         detection_msg.bbox.size_y = roi.height;
 
         detections.detections.push_back(detection_msg);
-
-        RCLCPP_INFO(get_logger(), "ROI pos [%.1f %.1f %.1f %.1f]", roi.x, roi.y, roi.width,
-                    roi.height);
       }
 
       object_tracker_pub_->publish(detections);
