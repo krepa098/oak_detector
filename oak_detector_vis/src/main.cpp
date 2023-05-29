@@ -40,21 +40,24 @@ int main(int argc, char **argv) {
         last_detections = msg;
       });
 
-  auto preview_sub = node->create_subscription<Image>(
-      "/oak_detector/preview/image", rclcpp::SensorDataQoS(), [&](const Image &msg) {
+  auto preview_sub = node->create_subscription<CompressedImage>(
+      "/oak_detector/color/compressed", rclcpp::SensorDataQoS(), [&](const CompressedImage &msg) {
         std::scoped_lock lock(last_detection_mutex);
         auto cv_img = cv_bridge::toCvCopy(msg);
 
         for (const auto &detection : last_detections.detections) {
           auto bb = detection.bbox;
 
-          cv::Rect2i roi;
-          roi.x = bb.center.position.x - bb.size_x / 2.0f;
-          roi.y = bb.center.position.y - bb.size_y / 2.0f;
-          roi.width = bb.size_x;
-          roi.height = bb.size_y;
+          const auto width = cv_img->image.cols;
+          const auto height = cv_img->image.rows;
 
-          cv::rectangle(cv_img->image, roi, cv::Scalar(0, 0, 200), 1);
+          cv::Rect2i roi;
+          roi.x = (bb.center.position.x - bb.size_x / 2.0f) * width;
+          roi.y = (bb.center.position.y - bb.size_y / 2.0f) * height;
+          roi.width = bb.size_x * width;
+          roi.height = bb.size_y * height;
+
+          cv::rectangle(cv_img->image, roi, cv::Scalar(0, 0, 200), 2);
 
           RCLCPP_INFO(node->get_logger(), "%i %i", roi.x, roi.y);
         }
